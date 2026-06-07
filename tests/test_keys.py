@@ -6,6 +6,7 @@ import pytest
 from agentidemp import (
     NAMESPACE_ANTHROPIC,
     NAMESPACE_DNS,
+    random,
     random_key,
     scoped_key,
     scoped_sha256_hex,
@@ -157,6 +158,11 @@ def test_scoped_sha256_hex_scope_type_error():
         scoped_sha256_hex(123, b"body")  # type: ignore[arg-type]
 
 
+def test_scoped_sha256_hex_content_type_error():
+    with pytest.raises(TypeError):
+        scoped_sha256_hex("scope", 123)  # type: ignore[arg-type]
+
+
 # ---------- scoped_key (variadic convenience) ----------
 
 
@@ -219,6 +225,12 @@ def test_random_key_is_not_deterministic():
     a = random_key()
     b = random_key()
     assert a != b
+
+
+def test_random_alias_is_random_key():
+    # the bare `random` export mirrors the Rust crate's name and must be the
+    # same callable as random_key
+    assert random is random_key
 
 
 # ---------- namespace constants ----------

@@ -18,8 +18,10 @@ NAMESPACE_DNS: uuid.UUID = NAMESPACE_ANTHROPIC
 # Idempotency-key prefix; mirrors the Rust crate's `ik_` marker.
 _PREFIX = "ik_"
 
-# Length of the hex portion (first 16 bytes of sha256 = 32 hex chars).
-_HEX_LEN = 32
+# Number of leading sha256 digest bytes used for the hex portion.
+_HEX_BYTES = 16
+# Length of the hex portion (16 bytes = 32 hex chars).
+_HEX_LEN = _HEX_BYTES * 2
 
 
 def _coerce_bytes(content: str | bytes, *, name: str = "content") -> bytes:
@@ -42,7 +44,7 @@ def sha256_hex(content: str | bytes) -> str:
     """
     data = _coerce_bytes(content)
     digest = hashlib.sha256(data).digest()
-    return _PREFIX + digest[:16].hex()
+    return _PREFIX + digest[:_HEX_BYTES].hex()
 
 
 def uuid5_key(namespace: uuid.UUID, name: str | bytes) -> str:
@@ -54,9 +56,7 @@ def uuid5_key(namespace: uuid.UUID, name: str | bytes) -> str:
     Returns the standard 36-character UUID string (8-4-4-4-12 hex with hyphens).
     """
     if not isinstance(namespace, uuid.UUID):
-        raise TypeError(
-            f"namespace must be uuid.UUID, got {type(namespace).__name__}"
-        )
+        raise TypeError(f"namespace must be uuid.UUID, got {type(namespace).__name__}")
     # uuid.uuid5 expects a str; if bytes were passed, decode as utf-8 to
     # match the Rust crate's `&[u8]` behavior.
     if isinstance(name, bytes):
@@ -102,7 +102,7 @@ def scoped_sha256_hex(scope: str, content: str | bytes) -> str:
     hasher.update(scope.encode("utf-8"))
     hasher.update(b"\x00")
     hasher.update(data)
-    return _PREFIX + hasher.digest()[:16].hex()
+    return _PREFIX + hasher.digest()[:_HEX_BYTES].hex()
 
 
 def scoped_key(scope: str, *parts: str | bytes) -> str:
@@ -123,4 +123,4 @@ def scoped_key(scope: str, *parts: str | bytes) -> str:
     for i, part in enumerate(parts):
         hasher.update(b"\x00")
         hasher.update(_coerce_bytes(part, name=f"parts[{i}]"))
-    return _PREFIX + hasher.digest()[:16].hex()
+    return _PREFIX + hasher.digest()[:_HEX_BYTES].hex()
